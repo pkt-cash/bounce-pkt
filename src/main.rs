@@ -17,7 +17,7 @@ pub struct Config {
     pub check_interval_sec: u64,
 }
 
-#[derive(Serialize,Deserialize,Default)]
+#[derive(Serialize,Deserialize,Default,Clone)]
 struct Db {
     names: HashMap<String, u64>,
 }
@@ -75,6 +75,12 @@ fn handle_txt_record(domain: &str, txts: Vec<String>) -> Result<Uri> {
     }
 }
 
+async fn store_db(path: &str, db: &Db) -> Result<()> {
+    let db_str = serde_yaml::to_string(db)?;
+    tokio::fs::write(path, db_str).await?;
+    Ok(())
+}
+
 async fn check_all_records(s: &Arc<Server>) -> Result<()> {
     println!("Checking bounce records");
     let names: Vec<String> = {
@@ -108,7 +114,7 @@ async fn check_all_records(s: &Arc<Server>) -> Result<()> {
         }
     }
     println!("{} records to update, {} records to remove", bounce_mappings.len(), remove_names.len());
-    {
+    let db = {
         let now = SystemTime::now().duration_since(std::time::UNIX_EPOCH)?.as_secs();
         let mut m = s.m.write().await;
         // Update mappings and timestamps
@@ -127,7 +133,9 @@ async fn check_all_records(s: &Arc<Server>) -> Result<()> {
             m.bounce_mappings.remove(&name);
             m.db.names.remove(&name);
         }
-    }
+        m.db.clone()
+    };
+    store_db(&s.config.db, &db).await?;
     Ok(())
 }
 
@@ -135,14 +143,23 @@ async fn handle_http_req(
     s: Arc<Server>,
     host: Option<Authority>,
     path: FullPath,
-    _query: String,
 ) -> Result<Uri> {
     let Some(host) = host else {
         bail!("No Host header provided");
     };
     let hostname = host.host();
+    // hostname will end with .pkt.something, we need to remote the .something
+    let hostname = if let Some(pos) = hostname.rfind('.') {
+        &hostname[..pos]
+    } else {
+        hostname
+    };
+    // Ensure hostname ends with .pkt
+    if !hostname.ends_with(".pkt") {
+        bail!("Domain does not end with .pkt: {}", hostname);
+    }
     let m = s.m.read().await;
-    let Some(bounce) = m.bounce_mappings.get(host.host()) else {
+    let Some(bounce) = m.bounce_mappings.get(hostname) else {
         bail!("No bounce record found for domain {}", hostname);
     };
     let Some(authority) = bounce.authority() else {
@@ -165,9 +182,8 @@ async fn warp_task(s: Arc<Server>, sa: SocketAddr) -> Result<()> {
         warp::any().map(move || Arc::clone(&s))
             .and(warp::host::optional())
             .and(warp::path::full())
-            .and(warp::query::raw())
-            .and_then(|s: Arc<Server>, host: Option<Authority>, path: FullPath, query: String| async move {
-                let b: Box<dyn warp::Reply> = match handle_http_req(s, host, path, query).await {
+            .and_then(|s: Arc<Server>, host: Option<Authority>, path: FullPath| async move {
+                let b: Box<dyn warp::Reply> = match handle_http_req(s, host, path).await {
                     Ok(r) => Box::new(warp::redirect::temporary(r)),
                     Err(e) => {
                         Box::new(warp::reply::with_status(
@@ -236,13 +252,27 @@ async fn check_domain(domain: String, s: Arc<Server>) -> Result<Box<dyn warp::Re
             )));
         }
     };
-    {
+    let db = {
         let mut m = s.m.write().await;
         m.db.names.insert(
             domain.clone(),
             SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
         );
         m.bounce_mappings.insert(domain.clone(), bounce.clone());
+        m.db.clone()
+    };
+    if let Err(e) = store_db(&s.config.db, &db).await {
+        let resp = CheckDomainResponse {
+            domain,
+            bounce: None,
+            error: Some(format!("Failed to store db: {}", e)),
+        };
+        let json = serde_json::to_string(&resp)
+            .unwrap_or_else(|_|"failed to serialize".to_string());
+        return Ok(Box::new(warp::reply::with_status(
+            json,
+            warp::http::StatusCode::OK,
+        )));
     }
     let resp = CheckDomainResponse {
         domain,
