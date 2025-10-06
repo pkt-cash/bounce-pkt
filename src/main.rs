@@ -1,7 +1,7 @@
-use std::{collections::HashMap, convert::Infallible, net::SocketAddr, sync::Arc, time::SystemTime};
+use std::{collections::HashMap, convert::Infallible, net::{IpAddr, SocketAddr}, sync::Arc, time::SystemTime};
 
 use eyre::{bail, eyre, Result};
-use hickory_resolver::Name;
+use hickory_resolver::{config::{NameServerConfig, ResolverConfig}, name_server::TokioConnectionProvider, proto::xfer::Protocol, Name};
 use serde::{Deserialize, Serialize};
 use tokio::{sync::RwLock, task::JoinSet};
 use warp::{filters::{host::Authority, path::FullPath}, http::Uri, Filter};
@@ -10,6 +10,7 @@ use warp::{filters::{host::Authority, path::FullPath}, http::Uri, Filter};
 pub struct Config {
     pub bind: String,
     pub admin_bind: String,
+    pub nameserver_ip: String,
     pub db: String,
     pub use_tld: String,
     pub stale_timeout_sec: u64,
@@ -323,9 +324,18 @@ async fn async_main() -> Result<()> {
         .map_err(|_| eyre!("Invalid admin bind address: {}", config.admin_bind))?;
     let use_tld = Name::from_ascii(&config.use_tld)
         .map_err(|_| eyre!("Invalid TLD: {}", config.use_tld))?;
+    let ns_ip: IpAddr = config.nameserver_ip.parse()
+        .map_err(|_| eyre!("Invalid nameserver IP: {}", config.nameserver_ip))?;
 
-    let resolver =
-        hickory_resolver::TokioResolver::builder_tokio()?.build();
+    let resolver = {    
+        let ns_sock = SocketAddr::new(ns_ip, 53);
+        let mut rc = ResolverConfig::new();
+        rc.add_name_server(NameServerConfig::new(ns_sock, Protocol::Udp));
+        hickory_resolver::TokioResolver::builder_with_config(
+            rc,
+            TokioConnectionProvider::default())
+        .build()
+    };
 
     // if db exists, load it, else create a new one
     let db = if tokio::fs::metadata(&config.db).await.is_ok() {
