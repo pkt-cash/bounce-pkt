@@ -1,3 +1,4 @@
+// Spdx-License-Identifier: MIT OR Apache-2.0
 use std::{collections::HashMap, convert::Infallible, net::{IpAddr, SocketAddr}, sync::Arc, time::SystemTime};
 
 use eyre::{bail, eyre, Result};

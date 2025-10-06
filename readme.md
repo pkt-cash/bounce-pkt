@@ -57,3 +57,7 @@ server {
     }
 }
 ```
+
+## License
+
+MIT OR Apache 2
