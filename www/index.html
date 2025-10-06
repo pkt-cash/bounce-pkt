@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>bounce.pkt — Redirect a PKT domain to your classical domain</title>
+  <style>
+    :root{
+      --bg:#0f1724; /* dark slate */
+      --card:#0b1220;
+      --muted:#94a3b8;
+      --accent:#7c3aed;
+      --success:#10b981;
+      --glass: rgba(255,255,255,0.03);
+      --glass-2: rgba(255,255,255,0.02);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    }
+
+    html,body{height:100%;}
+    body{
+      margin:0;
+      min-height:100%;
+      background:linear-gradient(180deg,#071024 0%,var(--bg) 100%);
+      color:#e6eef8;
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
+      padding:32px;
+      box-sizing:border-box;
+    }
+
+    .wrap{max-width:980px;margin:0 auto}
+
+    header{display:flex;align-items:center;gap:16px;margin-bottom:20px}
+    .logo{width:62px;height:62px;border-radius:10px;background:linear-gradient(135deg,var(--accent),#2dd4bf);display:grid;place-items:center;color:white;font-weight:700;font-size:20px}
+    h1{margin:0;font-size:20px}
+    p.lead{margin:4px 0 0;color:var(--muted);font-size:14px}
+
+    .card{background:linear-gradient(180deg,var(--card), rgba(255,255,255,0.02));border-radius:14px;padding:18px;box-shadow:0 6px 22px rgba(2,6,23,0.6);margin-bottom:18px}
+
+    .how ol{padding-left:20px;margin:0 0 8px 0;color:var(--muted)}
+    .how li{margin-bottom:3px;}
+    .how a{color:inherit;text-decoration:underline;opacity:0.95}
+
+    form.controls{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+    .input-row{flex:1;min-width:220px}
+    input[type="text"]{width:100%;padding:12px 14px;border-radius:10px;border:1px solid transparent;background:var(--glass);color:inherit;outline:none;box-shadow:inset 0 -2px 0 rgba(255,255,255,0.01)}
+    input[type="text"]:focus{box-shadow:0 4px 22px rgba(124,58,237,0.12);border-color:rgba(124,58,237,0.18)}
+
+    button.primary{background:linear-gradient(90deg,var(--accent),#06b6d4);color:white;padding:10px 16px;border-radius:10px;border:0;cursor:pointer;font-weight:600}
+    button.ghost{background:transparent;border:1px solid rgba(255,255,255,0.04);padding:10px 12px;border-radius:10px;color:var(--muted);cursor:pointer}
+
+    .status{margin-top:12px;padding:12px;border-radius:10px;background:var(--glass-2);display:flex;gap:12px;align-items:center}
+    .status .dot{width:12px;height:12px;border-radius:50%;background:var(--muted)}
+    .status.success .dot{background:var(--success)}
+    .status .text{font-size:13px;color:var(--muted)}
+
+    .grid{display:grid;grid-template-columns:1fr 360px;gap:16px}
+
+    table{width:100%;border-collapse:collapse;background:transparent}
+    thead th{font-size:13px;text-align:left;color:var(--muted);padding:10px 8px}
+    tbody td{padding:12px 8px;border-top:1px dashed rgba(255,255,255,0.03);font-size:14px}
+    tbody tr:hover td{background:linear-gradient(90deg,rgba(255,255,255,0.01),transparent)}
+
+    .small{font-size:13px;color:var(--muted)}
+    .muted{color:var(--muted)}
+
+    .right{display:flex;flex-direction:column;gap:8px}
+    .panel{padding:12px;border-radius:10px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01))}
+    .code{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", monospace;background:rgba(0,0,0,0.15);padding:8px;border-radius:8px;color:#e6eef8;word-break:break-all}
+
+    .actions{display:flex;gap:8px}
+    .tiny{font-size:12px;padding:6px 8px;border-radius:8px}
+
+    footer{margin-top:18px;margin-bottom:18px;color:var(--muted);font-size:13px;text-align:center}
+    footer a{color:var(--muted);text-decoration:none;opacity:0.95}
+
+    @media (max-width:880px){
+      .grid{grid-template-columns:1fr;}
+      .right{order:2}
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="logo">B<span style="opacity:0.9">PKT</span></div>
+      <div>
+        <h1>bounce.pkt</h1>
+        <p class="lead">Redirect a PKT domain to your classical domain.</p>
+      </div>
+    </header>
+
+    <section class="card how">
+      <h2 style="margin:0 0 8px 0;font-size:16px">How it works</h2>
+      <ol>
+        <li>In <a href="https://app.pkt.cash/pktdnspage" target="_blank" rel="noopener">PKT Dashboard</a> add a <code>CNAME</code> record to your domain with <strong>Host</strong> = <code>@</code> and <strong>Value</strong> = <code>bounce.pkt</code></li>
+        <li>Then add a <code>TXT</code> record with content:
+          <code class="code">BOUNCE=https://&lt;the website to redirect to&gt;</code><br>
+          <div class="small muted" style="margin-top:6px">Example: <code class="code">BOUNCE=https://pkteerium.xyz</code></div>
+        </li>
+        <li>Save changes on the dashboard</li>
+        <li>Come back here and enter your PKT domain below and click "Update"</li>
+      </ol>
+    </section>
+
+    <div class="grid">
+      <main class="card">
+        <h3 style="margin-top:0">Update your domain</h3>
+        <form id="updateForm" class="controls" onsubmit="return false;" autocomplete="off">
+        <label for="pktDomain" class="small muted">PKT domain</label>
+          <div class="input-row" style="display:flex;gap:8px;align-items:center">
+            <input id="pktDomain" type="text" placeholder="example.pkt" aria-label="PKT domain" required />
+            <button id="updateBtn" class="primary" type="button">Update</button>
+          </div>
+        </form>
+
+        <div id="status" class="status" role="status" aria-live="polite" style="display:none">
+          <div class="dot"></div>
+          <div class="text"></div>
+        </div>
+      </main>
+
+      <aside class="right">
+        <div class="panel card">
+          <h4 style="margin:0 0 8px 0">Current PKT domains</h4>
+          <div style="overflow:auto;max-height:320px">
+            <table id="domainsTable" aria-describedby="tableDesc">
+              <caption id="tableDesc" style="display:none">List of PKT domains and where they bounce to</caption>
+              <thead>
+                <tr><th>PKT Domain</th><th>Bounces To</th></tr>
+              </thead>
+              <tbody>
+                <!-- rows inserted by JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </aside>
+    </div>
+
+    <footer>
+      <div>Free Software - No Warrantees - <a href="https://github.com/pkt-cash/bounce-pkt">https://github.com/pkt-cash/bounce-pkt</a></div>
+    </footer>
+  </div>
+
+  <script>
+    // Lightweight client-only UI: stores entries in localStorage so you can test the table.
+    const form = document.getElementById('updateForm');
+    const pktInput = document.getElementById('pktDomain');
+    const updateBtn = document.getElementById('updateBtn');
+    const statusEl = document.getElementById('status');
+    const statusText = statusEl.querySelector('.text');
+    const domainsTable = document.querySelector('#domainsTable tbody');
+
+    function loadDomains(){
+      // Fetch /api/v1/domains
+      // Result is an array of tuples like this: [["pkteerium.pkt","https://pkteerium.xyz/"]]
+        return fetch('/api/v1/domains').then(res=>{
+            if(!res.ok) throw new Error('Network response was not ok');
+            return res.json();
+        }).then(data=>{
+            if(!Array.isArray(data)) return [];
+            return data.map(item=>{
+                if(Array.isArray(item) && item.length===2){
+                    return {domain:item[0], bounce:item[1]};
+                }
+                return null;
+            }).filter(x=>x);
+        }).catch(err=>{
+            console.error(err);
+            showStatus('Error loading domains: ' + err.message, 'error');
+            return [];
+        });
+    }
+    function renderTable(){
+      loadDomains().then(list=>{
+        list.forEach(item=>{
+            const tr = document.createElement('tr');
+            const dtd = document.createElement('td'); dtd.textContent = item.domain;
+            const btd = document.createElement('td'); btd.textContent = item.bounce;
+            tr.appendChild(dtd);tr.appendChild(btd);
+            domainsTable.appendChild(tr);
+        });
+      });
+      domainsTable.innerHTML = '';
+    }
+
+    function showStatus(text,type='info'){
+      statusEl.style.display='flex';
+      statusText.textContent = text;
+      statusEl.classList.toggle('success', type==='success');
+    }
+
+    function validateDomain(s){
+      // simple validation: allow letters, numbers, hyphen and dots, end with .pkt
+      s = (s||'').trim().toLowerCase();
+      if(!s) return false;
+      const re = /^(?=.{1,253}$)([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/; // generic domain
+      const isDotPkt = s.endsWith('.pkt');
+      return isDotPkt && re.test(s);
+    }
+
+    updateBtn.addEventListener('click', ()=>{
+      const val = pktInput.value.trim();
+      if(!validateDomain(val)){
+        showStatus('That does not look like a valid PKT domain (must end with .pkt).', 'error');
+        return;
+      }
+      // fetch https://bounce.pkt.wiki/api/v1/check/{name}
+      showStatus('Processing...', 'info');
+      fetch(`/api/v1/check/${encodeURIComponent(val)}`).then(res=>{
+        if(!res.ok) throw new Error('Network response was not ok');
+        return res.json();
+      }).then(data=>{
+        if(data.error){
+          showStatus('Error: ' + data.error, 'error');
+          return;
+        }
+        if(data.domain && data.bounce){
+          showStatus(`Domain ${data.domain} is set to bounce to: ${data.bounce}`, 'success');
+          renderTable();
+          return;
+        } else {
+          showStatus('No TXT records found for this domain. You can add one now.', 'info');
+        }
+        proceedToBounceUrl(val);
+      }).catch(err=>{
+        console.error(err);
+        showStatus('Error checking domain: ' + err.message, 'error');
+      });
+    });
+
+    // initial seed for demonstration (only if no data)
+    (function seed(){
+      renderTable();
+    })();
+  </script>
+</body>
+</html>
