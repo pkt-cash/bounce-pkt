@@ -71,6 +71,7 @@ fn handle_txt_record(domain: &str, txts: Vec<String>) -> Result<Uri> {
 }
 
 async fn check_all_records(s: &Arc<Server>) -> Result<()> {
+    println!("Checking bounce records");
     let names: Vec<String> = {
         let r = s.m.read().await;
         r.db.names.iter().map(|(n,_)|n.clone()).collect()
@@ -101,6 +102,7 @@ async fn check_all_records(s: &Arc<Server>) -> Result<()> {
             }
         }
     }
+    println!("{} records to update, {} records to remove", bounce_mappings.len(), remove_names.len());
     {
         let now = SystemTime::now().duration_since(std::time::UNIX_EPOCH)?.as_secs();
         let mut m = s.m.write().await;
@@ -181,6 +183,7 @@ async fn warp_task(s: Arc<Server>, sa: SocketAddr) -> Result<()> {
             })
     };
 
+    println!("Binding main interface to {}", sa);
     warp::serve(get_domains).bind(sa).await;
 
     Ok(())
@@ -272,6 +275,7 @@ async fn warp_admin_task(s: Arc<Server>, sa: SocketAddr) -> Result<()> {
             .and_then(check_domain)
     });
 
+    println!("Binding admin interface to {}", sa);
     warp::serve(routes).bind(sa).await;
 
     Ok(())
@@ -303,6 +307,7 @@ async fn async_main() -> Result<()> {
     // read bounce_pkt.yaml with tokio::fs
     let config = tokio::fs::read_to_string("./config.yaml").await?;
     let config = serde_yaml::from_str::<Config>(&config)?;
+    println!("Config loaded");
 
     let bind = config.bind.parse::<SocketAddr>()
         .map_err(|_| eyre!("Invalid bind address: {}", config.bind))?;
@@ -319,6 +324,7 @@ async fn async_main() -> Result<()> {
     } else {
         Db::default()
     };
+    println!("Db loaded");
 
     let s = Arc::new(Server {
         m: RwLock::new(ServerMut {
