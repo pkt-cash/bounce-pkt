@@ -36,11 +36,15 @@ struct Server {
     m: RwLock<ServerMut>,
     config: Config,
     resolver: Resolver,
+    use_tld: Name
 }
 
 async fn check_txt_record(s: Arc<Server>, domain: String) -> Result<(String, Vec<String>)> {
     // Use hickory-resolver to get the TXT record for the domain
-    Ok(s.resolver.txt_lookup(Name::from_ascii(&domain)?).await.map(|response| {
+    let name = Name::from_ascii(&domain)?;
+    let name = name.append_name(&s.use_tld)?;
+    println!("Checking TXT record for {}", name);
+    Ok(s.resolver.txt_lookup(name).await.map(|response| {
         let txts: Vec<String> = response.iter().map(|txt| {
             txt.txt_data().iter()
                 .map(|d| String::from_utf8_lossy(d).to_string())
@@ -317,6 +321,8 @@ async fn async_main() -> Result<()> {
         .map_err(|_| eyre!("Invalid bind address: {}", config.bind))?;
     let admin_bind = config.admin_bind.parse::<SocketAddr>()
         .map_err(|_| eyre!("Invalid admin bind address: {}", config.admin_bind))?;
+    let use_tld = Name::from_ascii(&config.use_tld)
+        .map_err(|_| eyre!("Invalid TLD: {}", config.use_tld))?;
 
     let resolver =
         hickory_resolver::TokioResolver::builder_tokio()?.build();
@@ -337,6 +343,7 @@ async fn async_main() -> Result<()> {
         }),
         config,
         resolver,
+        use_tld,
     });
 
     tokio::task::spawn(warp_task(Arc::clone(&s), bind));
