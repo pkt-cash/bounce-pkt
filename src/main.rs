@@ -184,7 +184,9 @@ async fn warp_task(s: Arc<Server>, sa: SocketAddr) -> Result<()> {
     };
 
     println!("Binding main interface to {}", sa);
-    warp::serve(get_domains).bind(sa).await;
+    let s = warp::serve(get_domains).bind(sa).await;
+    s.run().await;
+    println!("Main http has exited");
 
     Ok(())
 }
@@ -196,7 +198,7 @@ struct CheckDomainResponse {
     error: Option<String>,
 }
 
-async fn check_domain(s: Arc<Server>, domain: String) -> Result<Box<dyn warp::Reply>, Infallible> {
+async fn check_domain(domain: String, s: Arc<Server>) -> Result<Box<dyn warp::Reply>, Infallible> {
     let (domain, txts) = match check_txt_record(Arc::clone(&s), domain.clone()).await {
         Ok(rec) => rec,
         Err(e) => {
@@ -265,18 +267,20 @@ async fn domains(s: Arc<Server>) -> Result<Box<dyn warp::Reply>, Infallible> {
 async fn warp_admin_task(s: Arc<Server>, sa: SocketAddr) -> Result<()> {
     let routes = {
         let s = Arc::clone(&s);
-        warp::any().map(move || Arc::clone(&s))
-            .and(warp::path!("api" / "v1" / "domains"))
+        warp::path!("api" / "v1" / "domains")
+            .and(warp::any().map(move || Arc::clone(&s)))
             .and_then(domains)
     }.or({
         let s = Arc::clone(&s);
-        warp::any().map(move || Arc::clone(&s))
-            .and(warp::path!("api" / "v1" / "check" / String))
+        warp::path!("api" / "v1" / "check" / String)
+            .and(warp::any().map(move || Arc::clone(&s)))
             .and_then(check_domain)
     });
 
     println!("Binding admin interface to {}", sa);
-    warp::serve(routes).bind(sa).await;
+    let s = warp::serve(routes).bind(sa).await;
+    s.run().await;
+    println!("Admin http has exited");
 
     Ok(())
 }
