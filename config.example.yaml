@@ -1,0 +1,6 @@
+bind: "127.0.0.1:10000"
+admin_bind: "127.0.0.1:10001"
+db: "db.yaml"
+use_tld: "wiki"
+stale_timeout_sec: 86400
+check_interval_sec: 3600
