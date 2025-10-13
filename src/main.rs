@@ -63,13 +63,13 @@ fn handle_txt_record(domain: &str, txts: Vec<String>) -> Result<Uri> {
     }).next() {
         let bounce = &txt[pos + 7..];
         let bounce = bounce.split_whitespace().next().unwrap_or("");
-        println!("Found bounce record for {} => {}", domain, bounce);
         let bounce = match bounce.parse::<Uri>() {
             Ok(b) => b,
             Err(e) => {
                 bail!("Invalid bounce URI for {}: {}", domain, e);
             }
         };
+        println!("Found bounce record for {} => {}", domain, bounce);
         Ok(bounce)
     } else {
         bail!("No bounce record found for {}, removing from db", domain);
@@ -163,6 +163,9 @@ async fn handle_http_req(
     let Some(bounce) = m.bounce_mappings.get(hostname) else {
         bail!("No bounce record found for domain {}", hostname);
     };
+    if bounce.path() != "/" {
+        return Ok(bounce.clone());
+    }
     let Some(authority) = bounce.authority() else {
         bail!("Invalid bounce entry (missing hostname): {}", bounce.to_string());
     };
